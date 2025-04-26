@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import cv2
 from db import init_mysql, get_user_by_username, insert_user
+from predict import run_deepfake_detection  # Import predict functionality
 
 app = Flask(__name__)
 app.secret_key = "temp123"  # For development purposes only
@@ -68,23 +69,24 @@ def upload():
 
         save_folder = os.path.join(FRAMES_FOLDER, video_name)
 
-        # Check if the folder already exists
         if os.path.exists(save_folder):
-            # Delete the existing folder and all its contents
             for filename in os.listdir(save_folder):
                 file_path = os.path.join(save_folder, filename)
                 if os.path.isfile(file_path):
                     os.remove(file_path)
-                else:
-                    os.rmdir(file_path)
-            os.rmdir(save_folder)  # Remove the empty directory
+            os.rmdir(save_folder)
 
-        # Create a new folder for the frames
         os.makedirs(save_folder, exist_ok=True)
-        # Extract frames and save to the new folder
         extract_frames(video_path, frame_rate, save_folder)
 
-        return jsonify({"message": "Video processed successfully!", "video_name": video_name})
+        # Run deepfake prediction
+        summary = run_deepfake_detection(save_folder)
+
+        return jsonify({
+            "message": "Video processed successfully!",
+            "video_name": video_name,
+            "summary": summary
+        })
     
     return render_template("upload.html", username=session['username'])
 
@@ -92,7 +94,7 @@ def upload():
 def view_frames(video_name):
     frame_folder = os.path.join(FRAMES_FOLDER, video_name)
     if not os.path.exists(frame_folder):
-        return jsonify([])  # Return empty list if no frames are found
+        return jsonify([])
 
     frame_files = sorted(os.listdir(frame_folder))
     frame_urls = [f"/frames/{video_name}/{filename}" for filename in frame_files if filename.endswith(".jpg")]

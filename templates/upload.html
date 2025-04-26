@@ -3,27 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Frame Extractor</title>
+    <title>CyberEye</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background: #020024;
-            background: linear-gradient(90deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%);
+            background: linear-gradient(90deg, rgba(2,0,36,1) 0%, rgba(9,9,121,1) 35%, rgba(0,212,255,1) 100%);
+            color: #fff;
         }
-
         .frame-container {
             display: none;
             margin-top: 20px;
         }
-
         .frame-container img {
             width: 100px;
             margin: 5px;
         }
+        .summary-container {
+            display: none;
+            margin-top: 30px;
+        }
+        .summary-container ul {
+            background-color: #ffffff10;
+            border-radius: 8px;
+            padding: 15px;
+            list-style: none;
+        }
+        .summary-container li {
+            padding: 5px 0;
+        }
     </style>
 </head>
 <body>
-    <!-- Navigation bar with logout button -->
+    <!-- Navigation bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">Cyber Eye</a>
@@ -33,10 +44,10 @@
         </div>
     </nav>
 
-    <!-- Main content -->
+    <!-- Main container -->
     <div class="container mt-5">
         <div class="card p-4 shadow-sm">
-            <h2 class="mb-4 text-center">Cyber Eye</h2>
+            <h2 class="mb-4 text-center text-dark">Welcome, {{ username }}!</h2>
             <form id="uploadForm" enctype="multipart/form-data">
                 <div class="mb-3">
                     <label for="videoFile" class="form-label">Select Video:</label>
@@ -53,24 +64,33 @@
                 </div>
                 <button type="submit" class="btn btn-primary w-100">Upload & Process</button>
             </form>
-            <div id="message" class="mt-3 text-center"></div>
+            <div id="message" class="mt-3 text-center text-dark fw-bold"></div>
+        </div>
+
+        <!-- Detection Summary Section -->
+        <div id="summary-container" class="summary-container">
+            <h4 class="text-center mt-4">Deepfake Detection Summary</h4>
+            <ul id="summary-list" class="text-light"></ul>
         </div>
 
         <!-- View Frames Button -->
-        <button id="view-frames-btn" class="btn btn-success w-100 mt-4" style="display: none;">View Frames</button>
+        <button id="view-frames-btn" class="btn btn-success w-100 mt-4" style="display: none;">View Extracted Frames</button>
 
-        <!-- Frame Container to display frames -->
+        <!-- Frame display -->
         <div id="frame-container" class="frame-container text-center">
             <button id="close-view" class="btn btn-danger mb-3">Close View</button>
-            <div id="frames"></div>
+            <div id="frames" class="d-flex flex-wrap justify-content-center"></div>
         </div>
     </div>
 
+    <!-- JS Logic -->
     <script>
         document.getElementById("uploadForm").addEventListener("submit", async function(event) {
             event.preventDefault();
             const formData = new FormData(this);
-            document.getElementById("message").innerHTML = "Uploading...";
+            document.getElementById("message").innerHTML = "Processing video... Please wait.";
+            document.getElementById("summary-container").style.display = "none";
+            document.getElementById("view-frames-btn").style.display = "none";
 
             const response = await fetch("/upload", {
                 method: "POST",
@@ -81,12 +101,21 @@
             document.getElementById("message").innerHTML = result.message;
 
             if (result.message === "Video processed successfully!") {
-                // Show the "View Frames" button after video is processed
                 document.getElementById("view-frames-btn").style.display = "block";
+
+                // Show summary
+                const summary = result.summary;
+                const summaryList = document.getElementById("summary-list");
+                summaryList.innerHTML = `
+                    <li>Total Images Processed: ${summary.total_images}</li>
+                    <li>Genuine Images: ${summary.genuine_count} (${summary.genuine_percentage.toFixed(2)}%)</li>
+                    <li>Deepfake Images: ${summary.deepfake_count} (${summary.deepfake_percentage.toFixed(2)}%)</li>
+                    <li><strong>Video Classification: ${summary.video_classification.toUpperCase()}</strong></li>
+                `;
+                document.getElementById("summary-container").style.display = "block";
             }
         });
 
-        // Fetch and display frames when the "View Frames" button is clicked
         document.getElementById("view-frames-btn").addEventListener("click", async function() {
             const videoName = document.getElementById("videoFile").files[0].name.split('.')[0];
             const framesResponse = await fetch(`/view_frames/${videoName}`);
@@ -95,7 +124,7 @@
             if (frames.length > 0) {
                 const frameContainer = document.getElementById("frame-container");
                 const framesDiv = document.getElementById("frames");
-                framesDiv.innerHTML = ''; // Clear previous frames if any
+                framesDiv.innerHTML = '';
 
                 frames.forEach(frameUrl => {
                     const imgElement = document.createElement("img");
@@ -104,14 +133,12 @@
                     framesDiv.appendChild(imgElement);
                 });
 
-                frameContainer.style.display = "block"; // Show the frame container
+                frameContainer.style.display = "block";
             }
         });
 
-        // Close the frame view when the "Close View" button is clicked
-        document.getElementById("close-view").addEventListener("click", function() {
-            const frameContainer = document.getElementById("frame-container");
-            frameContainer.style.display = "none"; // Hide the frame container
+        document.getElementById("close-view").addEventListener("click", function () {
+            document.getElementById("frame-container").style.display = "none";
         });
     </script>
 </body>

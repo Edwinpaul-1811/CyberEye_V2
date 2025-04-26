@@ -5,19 +5,15 @@ import numpy as np
 from scipy.spatial.distance import euclidean
 from sklearn.cluster import KMeans
 
-# Load models
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor(r'model/shape_predictor_68_face_landmarks.dat')
+predictor = dlib.shape_predictor("model/shape_predictor_68_face_landmarks.dat")
 
-# Normalize the landmarks
 def normalize_landmarks(landmarks, face_width, face_height):
     return [(x / face_width, y / face_height) for x, y in landmarks]
 
-# Calculate Euclidean distance
 def calculate_landmark_distance(landmarks1, landmarks2):
     return sum(euclidean((x1, y1), (x2, y2)) for (x1, y1), (x2, y2) in zip(landmarks1, landmarks2))
 
-# This is the function you'll call from app.py
 def run_deepfake_detection(folder_path):
     image_extensions = ('.jpg', '.jpeg', '.png')
     landmarks_list = []
@@ -29,20 +25,13 @@ def run_deepfake_detection(folder_path):
             img = cv2.imread(path)
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             faces = detector(gray)
-
             if not faces:
-                print(f"{file} - Face: NO")
                 continue
-
             shape = predictor(gray, faces[0])
             coords = [(shape.part(i).x, shape.part(i).y) for i in range(68)]
-            face_width = faces[0].width()
-            face_height = faces[0].height()
-            normalized_coords = normalize_landmarks(coords, face_width, face_height)
-
+            normalized_coords = normalize_landmarks(coords, faces[0].width(), faces[0].height())
             landmarks_list.append(normalized_coords)
             image_files.append(file)
-            print(f"{file} - Face: YES | Landmarks Detected: {len(coords)}")
 
     if len(landmarks_list) < 2:
         return {
@@ -54,51 +43,32 @@ def run_deepfake_detection(folder_path):
             "video_classification": "Insufficient Data"
         }
 
-    def compare_landmark_consistency(landmarks_list):
-        consistency_scores = []
-        for i in range(len(landmarks_list)):
-            for j in range(i + 1, len(landmarks_list)):
-                distance = calculate_landmark_distance(landmarks_list[i], landmarks_list[j])
-                consistency_scores.append(distance)
-                print(f"Comparing {image_files[i]} and {image_files[j]} - Distance: {distance:.2f}")
-        return np.array(consistency_scores)
+    consistency_scores = []
+    for i in range(len(landmarks_list)):
+        for j in range(i + 1, len(landmarks_list)):
+            distance = calculate_landmark_distance(landmarks_list[i], landmarks_list[j])
+            consistency_scores.append(distance)
 
-    consistency_scores = compare_landmark_consistency(landmarks_list)
-
+    consistency_scores = np.array(consistency_scores)
     kmeans = KMeans(n_clusters=2, random_state=42)
     kmeans.fit(consistency_scores.reshape(-1, 1))
     labels = kmeans.labels_
-
     deepfake_label = 1 if np.mean(consistency_scores[labels == 1]) > np.mean(consistency_scores[labels == 0]) else 0
 
-    result = []
-    genuine_count = 0
-    deepfake_count = 0
+    result_labels = []
+    for landmarks in landmarks_list:
+        distances = [calculate_landmark_distance(landmarks, other) for other in landmarks_list if landmarks != other]
+        avg_distance = np.mean(distances)
+        label = kmeans.predict([[avg_distance]])[0]
+        result_labels.append(label)
 
-    for i, file in enumerate(image_files):
-        label = labels[i]
-        status = "deepfake" if label == deepfake_label else "genuine"
-        result.append(f"{file} - {status} (Cluster: {label})")
-        if status == "genuine":
-            genuine_count += 1
-        else:
-            deepfake_count += 1
-
-    print("\n--- Classification Results ---")
-    for res in result:
-        print(res)
-
-    total_images = len(image_files)
+    genuine_count = result_labels.count(1 - deepfake_label)
+    deepfake_count = result_labels.count(deepfake_label)
+    total_images = len(result_labels)
     genuine_percentage = (genuine_count / total_images) * 100
     deepfake_percentage = (deepfake_count / total_images) * 100
 
-    print("\n--- Overall Classification ---")
-    print(f"Total Images Processed: {total_images}")
-    print(f"Genuine Images: {genuine_count} ({genuine_percentage:.2f}%)")
-    print(f"Deepfake Images: {deepfake_count} ({deepfake_percentage:.2f}%)")
-
-    video_classification = "genuine" if genuine_percentage > 50 else "deepfake"
-    print(f"\nOverall Video Classification: {video_classification}")
+    video_classification = "genuine" if genuine_percentage > 60 else "deepfake"
 
     return {
         "total_images": total_images,
