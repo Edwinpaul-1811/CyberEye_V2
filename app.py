@@ -21,6 +21,10 @@ def home():
         return redirect('/index')
     return redirect('/login')
 
+@app.route('/blog')
+def blog():
+    return render_template('blog.html')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
