@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, session, jsonify, s
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 import cv2
-from db import init_mysql, get_user_by_identifier, insert_user, insert_video, insert_frame, insert_face, insert_analysis_result, insert_video_result
+from db import init_mysql, get_user_by_identifier, insert_user, insert_video, insert_frame, insert_face, insert_analysis_result, insert_video_result, get_videos_by_user, get_video_filename, delete_video_by_id
 from predict import run_deepfake_detection
 
 app = Flask(__name__)
@@ -18,7 +18,7 @@ os.makedirs(FRAMES_FOLDER, exist_ok=True)
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if 'loggedin' in session:
-        return redirect('/upload')
+        return redirect('/index')
     return redirect('/login')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -32,7 +32,7 @@ def login():
             session['loggedin'] = True
             session['id'] = user['user_id']
             session['username'] = user['username']
-            return redirect('/upload')
+            return redirect('/index')
         else:
             return render_template('login.html', message='Invalid credentials')
     return render_template('login.html')
@@ -56,8 +56,8 @@ def register():
         return redirect('/login')
     return render_template('register.html')
 
-@app.route("/upload", methods=["GET", "POST"])
-def upload():
+@app.route("/index", methods=["GET", "POST"])
+def index():
     if 'loggedin' not in session:
         return redirect('/login')
     
@@ -98,7 +98,49 @@ def upload():
             "summary": summary
         })
     
-    return render_template("upload.html", username=session['username'])
+    return render_template("index.html", username=session['username'])
+
+@app.route('/uploads/videos/<filename>')
+def serve_uploaded_video(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
+@app.route('/uploads')
+def uploads():
+    if 'loggedin' not in session:
+        return redirect('/login')
+
+    videos = get_videos_by_user(session['id'])
+
+    # Only keep videos whose files exist
+    existing_videos = [
+        v for v in videos if os.path.exists(os.path.join(UPLOAD_FOLDER, v['filename']))
+    ]
+
+    return render_template('uploads.html', videos=existing_videos, username=session['username'])
+
+@app.route('/delete_video/<int:video_id>', methods=['POST'])
+def delete_video(video_id):
+    if 'loggedin' not in session:
+        return redirect('/login')
+
+    video = get_video_filename(video_id, session['id'])
+    delete_video_by_id(video_id, session['id'])
+    if video:
+        video_path = os.path.join(UPLOAD_FOLDER, video['filename'])
+        if os.path.exists(video_path):
+            os.remove(video_path)
+
+        frame_folder = os.path.join(FRAMES_FOLDER, os.path.splitext(video['filename'])[0])
+        if os.path.exists(frame_folder):
+            for f in os.listdir(frame_folder):
+                os.remove(os.path.join(frame_folder, f))
+            os.rmdir(frame_folder)
+
+    return redirect('/uploads')
+@app.route('/save_video/<int:video_id>', methods=['POST'])
+def save_video(video_id):
+    # Implement logic for save (bookmark, export, or move)
+    return redirect('/uploads')
 
 @app.route("/view_frames/<video_name>")
 def view_frames(video_name):

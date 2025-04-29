@@ -39,10 +39,12 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="#">Cyber Eye</a>
             <div class="d-flex">
+                <a href="/uploads" class="btn btn-outline-light me-2">Uploads</a> <!-- NEW Uploads Button -->
                 <a href="/logout" class="btn btn-outline-light">Logout</a>
             </div>
         </div>
     </nav>
+    
 
     <!-- Main container -->
     <div class="container mt-5">
@@ -92,7 +94,7 @@
             document.getElementById("summary-container").style.display = "none";
             document.getElementById("view-frames-btn").style.display = "none";
 
-            const response = await fetch("/upload", {
+            const response = await fetch("/index", {
                 method: "POST",
                 body: formData
             });

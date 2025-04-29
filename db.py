@@ -11,6 +11,27 @@ def init_mysql(app):
     app.config['MYSQL_DB'] = 'cyber_eye'
     mysql.init_app(app)
 
+def get_videos_by_user(user_id):
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT * FROM video WHERE user_id = %s', (user_id,))
+    videos = cursor.fetchall()
+    cursor.close()
+    return videos
+
+def get_video_filename(video_id, user_id):
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT filename FROM video WHERE video_id = %s AND user_id = %s', (video_id, user_id))
+    video = cursor.fetchone()
+    cursor.close()
+    return video
+
+
+def delete_video_by_id(video_id, user_id):
+    cursor = mysql.connection.cursor()
+    cursor.execute('DELETE FROM video WHERE video_id = %s AND user_id = %s', (video_id, user_id))
+    mysql.connection.commit()
+    cursor.close()
+
 def get_user_by_identifier(identifier):
     cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
     cursor.execute('SELECT * FROM user WHERE username = %s OR email = %s', (identifier, identifier))
