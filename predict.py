@@ -135,5 +135,6 @@ def run_deepfake_detection(folder_path, frame_ids):
         "deepfake_percentage": deepfake_percentage,
         "video_classification": video_classification
     }
+    frame_statuses = dict(zip(image_files, ["genuine" if labels[i] != deepfake_label else "deepfake" for i in range(len(image_files))]))
+    return summary, total_faces_detected, frame_statuses
 
-    return summary, total_faces_detected

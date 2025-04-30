@@ -91,7 +91,8 @@ def index():
         frame_ids = extract_frames(video_path, frame_rate, save_folder, video_id)
 
         # Run deepfake prediction and insert faces + analysis
-        summary, total_faces = run_deepfake_detection(save_folder, frame_ids)
+        summary, total_faces, frame_statuses = run_deepfake_detection(save_folder, frame_ids)
+
 
         # Insert overall video result
         insert_video_result(video_id, summary['deepfake_percentage'], len(frame_ids), total_faces)
@@ -99,8 +100,10 @@ def index():
         return jsonify({
             "message": "Video processed successfully!",
             "video_name": video_name,
-            "summary": summary
+            "summary": summary,
+            "frame_statuses": frame_statuses  # <-- NEW
         })
+
     
     return render_template("index.html", username=session['username'])
 
