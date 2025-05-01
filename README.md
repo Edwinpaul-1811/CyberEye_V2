@@ -1,7 +1,3 @@
-Absolutely! Here’s a professional, detailed `README.md` for your **CyberEye Deepfake Detection Flask App**:
-
----
-
 # 🧠 CyberEye - Deepfake Detection App
 
 CyberEye is a smart web application that detects deepfake content in uploaded videos by analyzing facial landmarks and their consistency using deep learning and clustering techniques. Built with Flask and OpenCV, it offers a user-friendly interface to upload videos, extract frames, analyze faces, and display a deepfake classification summary.
