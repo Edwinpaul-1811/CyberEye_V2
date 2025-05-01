@@ -6,8 +6,8 @@ mysql = MySQL()
 
 def init_mysql(app):
     app.config['MYSQL_HOST'] = 'localhost'
-    app.config['MYSQL_USER'] = 'root'
-    app.config['MYSQL_PASSWORD'] = 'edwinpaul1811'
+    app.config['MYSQL_USER'] = 'root' # Replace with your MySQL username
+    app.config['MYSQL_PASSWORD'] = 'edwinpaul1811' # Replace with your MySQL password
     app.config['MYSQL_DB'] = 'cyber_eye'
     mysql.init_app(app)
 
