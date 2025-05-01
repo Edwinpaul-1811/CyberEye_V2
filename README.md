@@ -37,10 +37,11 @@ CyberEye/
 ├── templates/           # HTML templates (index.html, login.html, etc.)
 ├── uploads/             # Uploaded video files
 ├── frames/              # Extracted frame folders
+├── model/               # Dlib predictor (.dat file)
 ├── app.py               # Flask app
 ├── db.py                # MySQL DB functions
 ├── predict.py           # Deepfake detection logic
-├── model/               # Dlib predictor (.dat file)
+├── schema.sql           # MySQL schema for tables
 ├── requirements.txt     # Python dependencies
 └── README.md            # You're here!
 ```
