@@ -72,11 +72,6 @@ pip install -r requirements.txt
 
 > Ensure you also install OpenCV and dlib system dependencies (see below).
 
-### 4. 🏃‍♂️‍➡️ Run the Application
-```bash
-python app.py
-```
-
 ---
 
 ## 🧰 Dlib & OpenCV Setup
