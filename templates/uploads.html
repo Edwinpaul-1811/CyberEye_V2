@@ -17,25 +17,55 @@
             margin-bottom: 30px;
             padding: 20px;
             display: flex;
+            flex-direction: row; /* Display video and details side by side */
             align-items: flex-start;
-            gap: 20px;
         }
 
-        video {
-            width: 300px;
+        .video-col {
+            margin-right: 20px; /* Space between video and details */
+        }
+
+        .details-col {
+            flex: 1;
+        }
+
+        video {   
+            width: 400px;
             border-radius: 8px;
+            margin-bottom: 15px;
         }
 
-        .details {
-            flex-grow: 1;
-        }
-
-        .details p {
-            margin: 5px 0;
-        }
-
-        .btn-group {
+        .frame-view {
+            display: none;
             margin-top: 15px;
+        }
+
+        .frame-view img {
+            width: 100px;
+            margin: 5px;
+            border-radius: 6px;
+        }
+
+        .legend {
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .legend span {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+
+        .legend .genuine {
+            background-color: limegreen;
+            color: #000;
+        }
+
+        .legend .deepfake {
+            background-color: red;
+            color: #fff;
         }
     </style>
 </head>
@@ -45,7 +75,7 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="/"><b>Cyber Eye</b></a>
             <div class="d-flex">
-                <a href="/" class="btn btn-outline-light me-2">Home</a> <!-- New Home button -->
+                <a href="/" class="btn btn-outline-light me-2">Home</a>
                 <a href="/logout" class="btn btn-outline-light">Logout</a>
             </div>
         </div>
@@ -57,12 +87,14 @@
         {% if videos %}
         {% for video in videos %}
         <div class="upload-card">
-            <video controls>
-                <source src="{{ url_for('serve_uploaded_video', filename=video.filename) }}"
-                    type="video/{{ video.format }}">
-                Your browser does not support the video tag.
-            </video>
-            <div class="details">
+            <div class="video-col">
+                <video controls>
+                    <source src="{{ url_for('serve_uploaded_video', filename=video.filename) }}" type="video/{{ video.format }}">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+
+            <div class="details-col">
                 <h5>{{ video.filename }}</h5>
                 <p><strong>Uploaded:</strong> {{ video.upload_date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
                 <p><strong>FPS:</strong> {{ video.fps }}</p>
@@ -70,10 +102,19 @@
                 <p><strong>Format:</strong> {{ video.format }}</p>
 
                 <div class="btn-group">
-                    <form method="POST" action="/delete_video/{{ video.video_id }}" style="display:inline;"
-                        onsubmit="return confirm('Are you sure you want to delete this video?');">
+                    <form method="POST" action="/delete_video/{{ video.video_id }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this video?');">
                         <button class="btn btn-danger btn-sm">Delete</button>
                     </form>
+                    <button class="btn btn-success btn-sm ms-2 view-frames-btn" data-videoname="{{ video.filename.split('.')[0] }}">
+                        View Frames
+                    </button>
+                    <button class="btn btn-danger btn-sm ms-2 close-view-btn" style="display:none;">
+                        Close View
+                    </button>
+                </div>
+
+                <div class="frame-view mt-3">
+                    <div class="frames d-flex flex-wrap mt-2"></div>
                 </div>
             </div>
         </div>
@@ -82,6 +123,73 @@
         <p class="text-center">No videos uploaded yet.</p>
         {% endif %}
     </div>
+
+    <script>
+        document.querySelectorAll('.view-frames-btn').forEach(button => {
+            button.addEventListener('click', async function () {
+                const videoName = this.getAttribute('data-videoname');
+                const card = this.closest('.upload-card');
+                const frameView = card.querySelector('.frame-view');
+                const frameContainer = frameView.querySelector('.frames');
+                const closeBtn = card.querySelector('.close-view-btn');
+    
+                frameView.style.display = 'block';
+                this.style.display = 'none';
+                closeBtn.style.display = 'inline-block';
+                frameContainer.innerHTML = '<p>Loading frames...</p>';
+    
+                try {
+                    const [framesRes, statusesRes] = await Promise.all([
+                        fetch(`/view_frames/${videoName}`),
+                        fetch(`/frame_statuses/${videoName}`)
+                    ]);
+    
+                    const frameUrls = await framesRes.json();
+                    const statuses = await statusesRes.json();
+    
+                    frameContainer.innerHTML = '';
+
+                    // Normalize status keys for reliable lookup
+                    const normalizedStatuses = {};
+                    Object.keys(statuses).forEach(key => {
+                        normalizedStatuses[key.trim().toLowerCase()] = statuses[key];
+                    });
+                    frameUrls.forEach(url => {
+                        const filename = url.split('/').pop().trim().toLowerCase();
+                        const status = normalizedStatuses[filename] || 'unknown';
+
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.title = `${filename} - ${status}`;
+
+                        if (status === 'deepfake') {
+                            img.style.border = '3px solid red';
+                        } else if (status === 'genuine') {
+                            img.style.border = '3px solid limegreen';
+                        } else {
+                            img.style.border = '3px solid gray';
+                        }
+
+                        frameContainer.appendChild(img);
+                    });
+                } catch (error) {
+                    console.error(error);
+                    frameContainer.innerHTML = '<p>Error loading frames.</p>';
+                }
+            });
+        });
+    
+        document.querySelectorAll('.close-view-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const card = this.closest('.upload-card');
+                card.querySelector('.frame-view').style.display = 'none';
+                this.style.display = 'none';
+                card.querySelector('.view-frames-btn').style.display = 'inline-block';
+            });
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>    
+    
 </body>
 
 </html>

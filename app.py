@@ -4,6 +4,7 @@ import os
 import cv2
 from db import init_mysql, get_user_by_identifier, insert_user, insert_video, insert_frame, insert_face, insert_analysis_result, insert_video_result, get_videos_by_user, get_video_filename, delete_video_by_id
 from predict import run_deepfake_detection
+import json
 
 app = Flask(__name__)
 app.secret_key = "temp123"
@@ -142,6 +143,10 @@ def delete_video(video_id):
             for f in os.listdir(frame_folder):
                 os.remove(os.path.join(frame_folder, f))
             os.rmdir(frame_folder)
+        
+        result_json_path = os.path.join('results', f'{os.path.splitext(video["filename"])[0]}_frame_status.json')
+        if os.path.exists(result_json_path):
+            os.remove(result_json_path)
 
     return redirect('/uploads')
 @app.route('/save_video/<int:video_id>', methods=['POST'])
@@ -158,6 +163,15 @@ def view_frames(video_name):
     frame_files = sorted(os.listdir(frame_folder))
     frame_urls = [f"/frames/{video_name}/{filename}" for filename in frame_files if filename.endswith(".jpg")]
     return jsonify(frame_urls)
+
+@app.route('/frame_statuses/<video_name>')
+def frame_statuses(video_name):
+    # Return classification statuses for each frame
+    result_path = os.path.join('results', f'{video_name}_frame_status.json')
+    if os.path.exists(result_path):
+        with open(result_path) as f:
+            return jsonify(json.load(f))
+    return jsonify({})
 
 @app.route('/frames/<video_name>/<filename>')
 def serve_frame(video_name, filename):

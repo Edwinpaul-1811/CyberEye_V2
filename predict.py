@@ -2,6 +2,7 @@ import dlib
 import cv2
 import os
 import numpy as np
+import json
 from scipy.spatial.distance import euclidean
 from sklearn.cluster import KMeans
 from db import insert_face, insert_analysis_result
@@ -71,7 +72,7 @@ def run_deepfake_detection(folder_path, frame_ids):
             "genuine_percentage": 0,
             "deepfake_percentage": 0,
             "video_classification": "Insufficient Data"
-        }, total_faces_detected
+        }, total_faces_detected, {}
 
     def compare_landmark_consistency(landmarks_list):
         consistency_scores = []
@@ -135,6 +136,14 @@ def run_deepfake_detection(folder_path, frame_ids):
         "deepfake_percentage": deepfake_percentage,
         "video_classification": video_classification
     }
-    frame_statuses = dict(zip(image_files, ["genuine" if labels[i] != deepfake_label else "deepfake" for i in range(len(image_files))]))
-    return summary, total_faces_detected, frame_statuses
 
+    frame_statuses = dict(zip(image_files, ["genuine" if labels[i] != deepfake_label else "deepfake" for i in range(len(image_files))]))
+
+    # Save frame statuses to results folder
+    video_name = os.path.basename(folder_path)
+    os.makedirs('results', exist_ok=True)
+    result_path = os.path.join('results', f'{video_name}_frame_status.json')
+    with open(result_path, 'w') as f:
+        json.dump(frame_statuses, f)
+
+    return summary, total_faces_detected, frame_statuses
