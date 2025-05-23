@@ -148,15 +148,28 @@
                     const statuses = await statusesRes.json();
     
                     frameContainer.innerHTML = '';
+
+                    // Normalize status keys for reliable lookup
+                    const normalizedStatuses = {};
+                    Object.keys(statuses).forEach(key => {
+                        normalizedStatuses[key.trim().toLowerCase()] = statuses[key];
+                    });
                     frameUrls.forEach(url => {
-                        const filename = url.split('/').pop();
-                        const status = statuses[filename] || 'unknown';
-    
+                        const filename = url.split('/').pop().trim().toLowerCase();
+                        const status = normalizedStatuses[filename] || 'unknown';
+
                         const img = document.createElement('img');
                         img.src = url;
                         img.title = `${filename} - ${status}`;
-                        img.style.border = status === 'deepfake' ? '3px solid red' : '3px solid limegreen';
-    
+
+                        if (status === 'deepfake') {
+                            img.style.border = '3px solid red';
+                        } else if (status === 'genuine') {
+                            img.style.border = '3px solid limegreen';
+                        } else {
+                            img.style.border = '3px solid gray';
+                        }
+
                         frameContainer.appendChild(img);
                     });
                 } catch (error) {
