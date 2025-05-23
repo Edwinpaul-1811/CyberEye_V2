@@ -36,6 +36,7 @@ CyberEye/
 ├── static/              # Static files (optional)
 ├── templates/           # HTML templates (index.html, login.html, etc.)
 ├── uploads/             # Uploaded video files
+├── results/             # Frame results
 ├── frames/              # Extracted frame folders
 ├── model/               # Dlib predictor (.dat file)
 ├── app.py               # Flask app
